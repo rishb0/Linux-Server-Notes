@@ -212,7 +212,68 @@ chmod 711 /home/username
 chmod 755 /home/username/public_html
 chown username:username /home/username/public_html
 ```
+## HTTP Redirects
 
+```bash
+# Enable required modules
+a2enmod rewrite
+a2enmod alias
+```
+
+```apache
+# Simple page redirect
+Redirect /oldpage.html /newpage.html
+
+# Permanent redirect to different domain
+Redirect permanent /oldpage.html https://newdomain.com/newpage.html
+
+# Redirect entire site
+Redirect 301 / https://newdomain.com/
+
+# HTTP to HTTPS redirect in VirtualHost
+<VirtualHost *:80>
+    ServerName example.com
+    ServerAlias www.example.com
+    
+    # Option 1: Simple redirect
+    Redirect permanent / https://example.com/
+    
+    # Option 2: Using RewriteEngine
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</VirtualHost>
+
+# Non-www to www redirect
+<VirtualHost *:80>
+    ServerName example.com
+    RewriteEngine On
+    RewriteCond %{HTTP_HOST} ^example\.com$ [NC]
+    RewriteRule ^(.*)$ https://www.example.com/$1 [R=301,L]
+</VirtualHost>
+
+# www to non-www redirect
+<VirtualHost *:80>
+    ServerName www.example.com
+    RewriteEngine On
+    RewriteRule ^(.*)$ https://example.com/$1 [R=301,L]
+</VirtualHost>
+
+# Redirect in .htaccess (requires AllowOverride All)
+# /var/www/html/.htaccess
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirect specific directory
+RedirectMatch 301 ^/olddir/(.*)$ /newdir/$1
+
+# Redirect with query parameters preserved
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP_HOST} ^example\.com$
+RewriteRule (.*) https://www.example.com/$1 [R=301,L,QSA]
+```
 ## WebDAV Configuration
 
 ```bash
