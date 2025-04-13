@@ -1,0 +1,417 @@
+# Apache Web Server Setup and Configuration
+
+This document outlines the installation, configuration, and management of the Apache Web Server on a Debian-based Linux system using `apt` and `dpkg` package managers. It includes essential commands, configuration examples, and troubleshooting steps.
+
+---
+
+## 1. Check If Apache is Installed
+
+Use the following command to check if Apache is already installed:
+
+```bash
+dpkg -l | grep apache2
+```
+
+---
+
+## 2. Install Apache Web Server
+
+Install Apache using `apt`:
+
+```bash
+apt update
+apt install apache2
+```
+
+Install all related Apache packages:
+
+```bash
+apt install apache2*
+```
+
+---
+
+## 3. Verify Apache Installation
+
+- **Check package information:**
+
+  ```bash
+  dpkg -s apache2
+  ```
+
+- **List installed files:**
+
+  ```bash
+  dpkg -L apache2
+  ```
+
+  > **Note:**  
+  > The main configuration file `/etc/apache2/apache2.conf` is not listed in `dpkg -L apache2` because it is not installed directly from the `apache2` package. Instead, it is usually part of `apache2-bin` or created during the first run of Apache. You can check it with:
+  >
+  > ```bash
+  > dpkg -L apache2-bin
+  > ```
+  > or
+  > ```bash
+  > dpkg -L apache2-common
+  > ```
+
+- **List configuration files:**
+
+  ```bash
+  dpkg -L apache2 | grep conf
+  ```
+
+- **List documentation files:**
+
+  ```bash
+  dpkg -L apache2 | grep doc
+  ```
+
+---
+
+## 4. Apache Configuration
+
+### View Apache Configuration
+
+- **Check the main configuration file:**
+
+  ```bash
+  tail /etc/apache2/apache2.conf
+  ```
+
+- **Find the `mods-enabled` directory:**
+
+  ```bash
+  grep mods-enabled /etc/apache2/apache2.conf
+  ```
+
+  Then list the content of the modules directory:
+
+  ```bash
+  ls /etc/apache2/mods-enabled/
+  ```
+
+  **Example Output:**
+
+  ```
+  access_compat.load  auth_basic.load        authz_user.load  env.load        mpm_prefork.load  reqtimeout.load  status.load
+  alias.conf          authn_core.load        deflate.conf     filter.load     negotiation.conf  setenvif.conf
+  alias.load          authn_file.load        deflate.load     mime.conf       negotiation.load  setenvif.load
+  auth_basic.conf     authz_core.load        dir.conf         mime.load       rewrite.load      status.conf
+  ```
+
+  These are Apache module configuration files enabling or configuring specific Apache modules.
+
+- **Find the `conf-enabled` directory:**
+
+  ```bash
+  grep conf-enabled /etc/apache2/apache2.conf
+  ```
+
+  Then list the content of the configuration directory:
+
+  ```bash
+  ls /etc/apache2/conf-enabled/
+  ```
+
+  **Example Output:**
+
+  ```
+  charset.conf  localized-error-pages.conf  other-vhosts-access-log.conf  security.conf  serve-cgi-bin.conf
+  ```
+
+  These files are used to configure specific features and settings.
+
+---
+
+## 5. Manage Apache Service
+
+### Check Apache Status
+
+Check if the Apache service is running:
+
+```bash
+systemctl status apache2.service
+```
+
+### Start Apache Service
+
+Start the Apache service:
+
+```bash
+systemctl start apache2.service
+```
+
+### Enable Apache to Start on Boot
+
+Enable Apache to start automatically on system boot:
+
+```bash
+systemctl enable apache2.service
+```
+
+### Restart Apache Service
+
+Restart the Apache service when changes are made:
+
+```bash
+systemctl restart apache2.service
+```
+
+---
+
+## 6. Network and Port Verification
+
+### Check Open Ports and Services
+
+- **List all open ports:**
+
+  ```bash
+  netstat -nltup
+  ```
+
+- **Check if port 80 is open:**
+
+  ```bash
+  netstat -nltup | grep 80
+  ```
+
+- **Check if Apache is listening:**
+
+  ```bash
+  netstat -nltup | grep apache2
+  ```
+
+---
+
+## 7. Firewall Configuration
+
+UFW (Uncomplicated Firewall) is commonly used in Debian to manage firewall rules. You can allow traffic either by using a predefined service or by opening specific ports.
+
+### 7.1 Allow a Service (Recommended)
+
+UFW has predefined services that automatically open the required ports. For example:
+
+```bash
+ufw allow 'Apache'
+ufw allow 'Apache Full'
+```
+
+This configuration allows web traffic on ports **80** and **443**.
+
+### 7.2 Allow a Specific Port
+
+If a service is not predefined, you can open a port manually. For example, allow traffic on TCP port **8080**:
+
+```bash
+ufw allow 8080/tcp
+```
+
+> **Note:** If your Apache (or Tomcat) server runs on ports like **8080** or **8443**, you must allow these ports explicitly.
+
+### 7.3 Check Allowed Services & Ports
+
+To see the active firewall configuration:
+
+```bash
+ufw status verbose
+```
+
+### 7.4 Remove a Service or Port
+
+To remove the defined service or port:
+
+```bash
+ufw delete allow 'Apache'
+ufw delete allow 8080/tcp
+```
+
+---
+
+## 8. Enable Logging (Optional)
+
+Enable UFW logging:
+
+```bash
+ufw logging on
+```
+
+View the firewall logs in real time:
+
+```bash
+tail -f /var/log/ufw.log
+```
+
+---
+
+## 9. Apache Process and User Management
+
+### Check Running Processes
+
+Check Apache processes:
+
+```bash
+ps -aux | grep apache2
+```
+
+To check open files related to Apache:
+
+```bash
+lsof | grep apache2
+```
+
+### Check Apache User and Group
+
+To verify the Apache user:
+
+```bash
+cat /etc/passwd | grep www-data
+```
+
+> When installing the apache2 service, a user and group named `www-data` are used. This user is used to run the apache2 service.
+
+To verify the Apache group:
+
+```bash
+cat /etc/group | grep www-data
+```
+
+---
+
+## 10. Configure Website Files
+
+### Create or Edit Web Files
+
+Navigate to the document root:
+
+```bash
+cd /var/www/html
+```
+
+> **Note:**  
+> The `/var/www/html/` directory is the default document root for Apache on Debian. If no custom files (like `index.html`, `index.php`, etc.) are present, Apache will serve a default index page.
+
+#### Disable the Default Index Page
+
+To disable the default index page, move or rename the file `/var/www/html/index.html`.
+
+#### Create or Edit `index.html`
+
+```bash
+vim /var/www/html/index.html
+```
+
+### Remove Existing Default File
+
+If needed, remove the existing file:
+
+```bash
+rm -f index.html
+```
+
+### Set Ownership of Web Files
+
+Set the ownership of the document root to the Apache user:
+
+```bash
+chown -Rv www-data:www-data /var/www/html/
+```
+
+---
+
+## 11. Load Custom Site
+
+### Download and Extract Template Files
+
+- **Download the template:**
+
+  ```bash
+  wget https://templatemo.com/tm-zip-files-2020/templatemo_571_hexashop.zip
+  ```
+
+- **Unzip the template:**
+
+  ```bash
+  unzip templatemo_571_hexashop.zip
+  ```
+
+- **Remove the zip file:**
+
+  ```bash
+  rm -rf templatemo_571_hexashop.zip
+  ```
+
+- **Move the extracted folder:**
+
+  ```bash
+  mv -v templatemo_571_hexashop site1
+  ```
+
+- **Copy site files to the web root:**
+
+  ```bash
+  cp -vr /root/site1/* /var/www/html
+  ```
+
+---
+
+## 12. Configure Apache to Load CSS Files (If CSS Does Not Load)
+
+Edit the Apache configuration file (`/etc/apache2/apache2.conf`) to include the appropriate MIME type and filter settings. For example, add the following lines:
+
+```apache
+<IfModule mime_module>
+    AddType text/html .shtml
+    AddType text/css .css
+    AddOutputFilter INCLUDES .shtml
+</IfModule>
+```
+
+Edit the configuration file:
+
+```bash
+vim /etc/apache2/apache2.conf
+```
+
+Alternatively, you can check if the MIME module is enabled:
+
+```bash
+ls -l /etc/apache2/mods-enabled/ | grep mime
+```
+
+If not enabled, enable it with:
+
+```bash
+a2enmod mime
+```
+
+Restart Apache to apply changes:
+
+```bash
+systemctl restart apache2.service
+```
+
+Set correct ownership for your web files:
+
+```bash
+chown -Rv www-data:www-data /var/www/html/*
+```
+
+---
+
+## 13. Test Apache Setup
+
+### Test Configuration
+
+Create a test file (e.g., with the text "Test123 ...") in the document root if needed.
+
+### Check if Apache is Running
+
+Use `curl` to verify that Apache is responding:
+
+```bash
+curl http://localhost
+```
+
+---

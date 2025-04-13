@@ -1,0 +1,259 @@
+# WordPress Installation and Configuration
+
+WordPress is a popular content management system (CMS) used to create and manage websites.
+
+### Step 1: Download and Extract WordPress
+
+Download the latest version of WordPress from the official website:
+```
+wget https://wordpress.org/latest.zip
+```
+
+Install unzip if not already installed:
+```
+apt install unzip
+```
+
+Extract the downloaded package:
+```
+unzip latest.zip
+```
+
+Move WordPress files to the Apache web directory:
+```
+cp -vr wordpress/ /var/www/html/
+```
+
+Navigate to the web root directory:
+```
+cd /var/www/html/
+```
+
+Set the correct ownership to allow Apache to manage WordPress files:
+```
+chown -Rv www-data:www-data wordpress/
+```
+
+Navigate to the WordPress directory:
+```
+cd wordpress/
+```
+
+Set proper permissions for essential WordPress directories:
+```
+chmod -Rv 0755 wp-includes/ wp-admin/js/ wp-content/themes/ wp-content/plugins/
+``` 
+
+### Step 2: Configure Apache for WordPress
+
+Create a new site configuration file in the sites-available directory:
+```
+vim /etc/apache2/sites-available/wordpress-ssl.conf
+```
+
+Add the following configuration:
+```
+<VirtualHost 192.168.1.31:443>
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/localhost.crt
+    SSLCertificateKeyFile /etc/ssl/private/localhost.key
+    DocumentRoot /var/www/html/wordpress/
+    DirectoryIndex index.php
+    
+    <Directory /var/www/html/wordpress/>
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    
+    ErrorLog ${APACHE_LOG_DIR}/wordpress_error.log
+    CustomLog ${APACHE_LOG_DIR}/wordpress_access.log combined
+</VirtualHost>
+```
+
+Enable the SSL module if not already enabled:
+```
+a2enmod ssl
+```
+
+Enable the new site configuration:
+```
+a2ensite wordpress-ssl.conf
+```
+
+Restart Apache to apply changes:
+```
+systemctl restart apache2.service
+```
+
+### Step 3: Create a MySQL Database for WordPress
+
+Log in to MySQL as root:
+```
+mysql -u root -p
+```
+
+Create a database and user for WordPress:
+```sql
+CREATE DATABASE wordpress;
+CREATE USER 'wpuser'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON wordpress.* TO 'wpuser'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+### Step 4: Configure WordPress
+
+Create a WordPress configuration file by copying the sample:
+```
+cd /var/www/html/wordpress
+cp wp-config-sample.php wp-config.php
+```
+
+Edit the configuration file to set database details:
+```
+vim wp-config.php
+```
+
+Update the following database settings:
+```php
+// ** Database settings - You can get this info from your web host ** //
+/** The name of the database for WordPress */
+define( 'DB_NAME', 'wordpress' );
+
+/** Database username */
+define( 'DB_USER', 'wpuser' );
+
+/** Database password */
+define( 'DB_PASSWORD', 'your_password' );
+
+/** Database hostname */
+define( 'DB_HOST', 'localhost' );
+```
+
+Generate and add security keys to the config file by replacing the existing keys section with values from:
+```
+curl https://api.wordpress.org/secret-key/1.1/salt/
+```
+
+### Step 5: Complete WordPress Installation
+
+Open your web browser and navigate to your domain or server IP address:
+```
+https://192.168.1.31/wordpress/
+```
+or if you've set up DNS:
+```
+https://armour.local/wordpress/
+```
+
+Follow the on-screen instructions to complete the WordPress installation.
+
+# Apache VirtualHost Configuration
+
+A VirtualHost configuration allows Apache to serve multiple websites from the same server.
+
+### Step 1: Configure VirtualHost for SSL
+
+To enable HTTPS support for your website, create a configuration file in the sites-available directory:
+
+```
+vim /etc/apache2/sites-available/armour-ssl.conf
+```
+
+Add the following configuration:
+```apache
+<VirtualHost 192.168.1.31:443>
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/certs/localhost.crt
+    SSLCertificateKeyFile /etc/ssl/private/localhost.key
+    ServerName armour.local
+    DocumentRoot /var/www/html/wordpress/
+    DirectoryIndex index.php
+    ServerAlias www.armour.local
+    
+    <Directory /var/www/html/wordpress/>
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    
+    ErrorLog ${APACHE_LOG_DIR}/armour_error.log
+    CustomLog ${APACHE_LOG_DIR}/armour_access.log combined
+</VirtualHost>
+```
+
+Enable the site:
+```
+a2ensite armour-ssl.conf
+```
+
+### Step 2: Configure VirtualHost for HTTP
+
+If you want your site to be accessible over HTTP (non-secure), create another configuration file:
+
+```
+vim /etc/apache2/sites-available/armour.conf
+```
+
+Add the following configuration:
+```apache
+<VirtualHost 192.168.1.31:80>
+    ServerName armour.local
+    DocumentRoot /var/www/html/wordpress/
+    DirectoryIndex index.php
+    ServerAlias www.armour.local
+    
+    <Directory /var/www/html/wordpress/>
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    
+    ErrorLog ${APACHE_LOG_DIR}/armour_error.log
+    CustomLog ${APACHE_LOG_DIR}/armour_access.log combined
+</VirtualHost>
+```
+
+Enable the site:
+```
+a2ensite armour.conf
+```
+
+### Step 3: Enable Required Apache Modules
+
+Enable the rewrite module for WordPress permalinks:
+```
+a2enmod rewrite
+```
+
+### Step 4: Restart Apache and Update Firewall
+
+Restart Apache to apply all configuration changes:
+```
+systemctl restart apache2.service
+```
+
+Ensure firewall allows HTTP and HTTPS traffic:
+```
+ufw allow 80/tcp
+ufw allow 443/tcp
+```
+
+### Step 5: Test Your Configuration
+
+Check Apache configuration syntax:
+```
+apache2ctl configtest
+```
+
+Verify domain resolution:
+```
+dig armour.local
+```
+or add an entry to your local hosts file for testing:
+```
+echo "192.168.1.31 armour.local www.armour.local" >> /etc/hosts
+```
+
+Access your WordPress site in a browser to complete the setup process.
